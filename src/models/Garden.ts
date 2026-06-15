@@ -30,6 +30,9 @@ export interface IGarden extends Document {
   plantCount: number;
   taskCount: number;
   healthStatus: string;
+  lastWateredAt?: Date | null;
+  wateringCount: number;
+  wateringStreak: number;
   archivedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -54,6 +57,9 @@ const gardenSchema = new Schema<IGarden>(
     plantCount: { type: Number, default: 0 },
     taskCount: { type: Number, default: 0 },
     healthStatus: { type: String, default: 'Getting started' },
+    lastWateredAt: { type: Date, default: null },
+    wateringCount: { type: Number, default: 0 },
+    wateringStreak: { type: Number, default: 0 },
     archivedAt: { type: Date, default: null },
   },
   {

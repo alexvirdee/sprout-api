@@ -27,6 +27,8 @@ export interface IPlant extends Document {
   wateringPreference: string;
   notes?: string;
   status: string;
+  lastWateredAt?: Date | null;
+  wateringCount: number;
   archivedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +48,8 @@ const plantSchema = new Schema<IPlant>(
     wateringPreference: { type: String, enum: [...PLANT_WATERING_PREFS], default: 'not_sure' },
     notes: { type: String, trim: true },
     status: { type: String, enum: [...PLANT_STATUSES], default: 'growing' },
+    lastWateredAt: { type: Date, default: null },
+    wateringCount: { type: Number, default: 0 },
     archivedAt: { type: Date, default: null },
   },
   {

@@ -87,6 +87,18 @@ export const updatePlantSchema = createPlantSchema
   .omit({ gardenId: true })
   .extend({ status: z.enum(PLANT_STATUSES).optional() });
 
+/* ---- Watering ---- */
+export const WATERING_TARGETS = ['garden', 'plant'] as const;
+export const WATERING_TYPES = ['light', 'normal', 'deep'] as const;
+
+export const createWateringSchema = z.object({
+  gardenId: z.string().min(1),
+  plantId: z.string().optional(),
+  wateringTarget: z.enum(WATERING_TARGETS).default('garden'),
+  wateringType: z.enum(WATERING_TYPES).default('normal'),
+  notes: z.string().trim().max(2000).optional(),
+});
+
 /* ---- Task ---- */
 export const createTaskSchema = z.object({
   plantId: z.string().min(1),

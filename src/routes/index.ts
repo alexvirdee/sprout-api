@@ -7,6 +7,7 @@ import { Router } from 'express';
 import authRoutes from './auth.routes';
 import gardenRoutes from './garden.routes';
 import plantRoutes from './plant.routes';
+import wateringRoutes from './watering.routes';
 import taskRoutes from './task.routes';
 import userRoutes from './user.routes';
 
@@ -19,6 +20,7 @@ router.get('/health', (_req, res) => {
 router.use('/auth', authRoutes);
 router.use('/gardens', gardenRoutes);
 router.use('/plants', plantRoutes);
+router.use('/watering', wateringRoutes);
 router.use('/tasks', taskRoutes);
 router.use('/users', userRoutes);
 
