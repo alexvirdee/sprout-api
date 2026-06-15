@@ -9,6 +9,20 @@ import { Schema, model, Document, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export type AuthProvider = 'credentials' | 'google';
+export type ThemePreference = 'light' | 'dark' | 'system';
+
+export interface NotificationPreferences {
+  pushEnabled: boolean;
+  wateringReminders: boolean;
+  careTips: boolean;
+  seasonalTips: boolean;
+  achievements: boolean;
+}
+
+export interface UnlockedAchievement {
+  id: string;
+  unlockedAt: Date;
+}
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
@@ -16,6 +30,15 @@ export interface IUser extends Document {
   email: string;
   passwordHash?: string;
   avatar?: string | null;
+  avatarFileId?: Types.ObjectId | null;
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  themePreference: ThemePreference;
+  notificationPreferences: NotificationPreferences;
+  achievements: UnlockedAchievement[];
   authProvider: AuthProvider;
   googleId?: string;
   createdAt: Date;
@@ -36,6 +59,29 @@ const userSchema = new Schema<IUser>(
     },
     passwordHash: { type: String, select: false },
     avatar: { type: String, default: null },
+    avatarFileId: { type: Schema.Types.ObjectId, default: null },
+    displayName: { type: String, trim: true, default: null },
+    firstName: { type: String, trim: true, default: null },
+    lastName: { type: String, trim: true, default: null },
+    bio: { type: String, trim: true, default: null },
+    location: { type: String, trim: true, default: null },
+    themePreference: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
+    notificationPreferences: {
+      pushEnabled: { type: Boolean, default: true },
+      wateringReminders: { type: Boolean, default: true },
+      careTips: { type: Boolean, default: true },
+      seasonalTips: { type: Boolean, default: true },
+      achievements: { type: Boolean, default: true },
+    },
+    achievements: {
+      type: [
+        new Schema(
+          { id: { type: String, required: true }, unlockedAt: { type: Date, default: Date.now } },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
     authProvider: { type: String, enum: ['credentials', 'google'], default: 'credentials' },
     googleId: { type: String, index: true, sparse: true },
   },
@@ -48,6 +94,7 @@ const userSchema = new Schema<IUser>(
         ret.id = ret._id;
         delete ret._id;
         delete ret.passwordHash;
+        delete ret.avatarFileId;
         // Stable contract: avatar is always present (null when unset).
         ret.avatar = ret.avatar ?? null;
         return ret;

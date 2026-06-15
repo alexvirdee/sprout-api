@@ -107,6 +107,40 @@ export const createTaskSchema = z.object({
   dueDate: z.coerce.date(),
 });
 
+/* ---- User / Profile ---- */
+export const THEME_PREFERENCES = ['light', 'dark', 'system'] as const;
+
+export const updateMeSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  displayName: z.string().trim().min(1, 'Display name is required').max(50).optional(),
+  firstName: z.string().trim().max(50).optional(),
+  lastName: z.string().trim().max(50).optional(),
+  bio: z.string().trim().max(280).optional(),
+  location: z.string().trim().max(120).optional(),
+  // A URL or local image URI; nullable so the client can remove the avatar.
+  avatar: z.string().trim().max(100_000).nullable().optional(),
+  email: z.string().trim().email('Enter a valid email').optional(),
+});
+
+export const notificationPreferencesSchema = z
+  .object({
+    pushEnabled: z.boolean(),
+    wateringReminders: z.boolean(),
+    careTips: z.boolean(),
+    seasonalTips: z.boolean(),
+    achievements: z.boolean(),
+  })
+  .partial();
+
+export const updateThemeSchema = z.object({
+  themePreference: z.enum(THEME_PREFERENCES),
+});
+
+export const updatePreferencesSchema = z.object({
+  themePreference: z.enum(THEME_PREFERENCES).optional(),
+  notificationPreferences: notificationPreferencesSchema.optional(),
+});
+
 export const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
   type: z.enum(['water', 'fertilize', 'harvest', 'prune', 'plant', 'other']).optional(),
