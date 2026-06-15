@@ -6,16 +6,16 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { AppError } from '../utils/AppError';
-import { verifyAccessToken } from '../services/token.service';
+import { verifyToken } from '../services/token.service';
 
 export function protect(req: Request, _res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
-    throw AppError.unauthorized('Missing access token');
+    throw AppError.unauthorized('Missing or invalid token');
   }
 
   const token = header.slice('Bearer '.length).trim();
-  const { sub } = verifyAccessToken(token);
-  req.userId = sub;
+  const { userId } = verifyToken(token);
+  req.userId = userId;
   next();
 }

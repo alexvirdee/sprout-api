@@ -5,14 +5,14 @@
 import { z } from 'zod';
 
 /* ---- Auth ---- */
-export const registerSchema = z.object({
-  name: z.string().min(2, 'Name is too short'),
-  email: z.string().email(),
+export const signupSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required'),
+  email: z.string().trim().email('Enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email('Enter a valid email'),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -20,19 +20,38 @@ export const googleSchema = z.object({
   idToken: z.string().min(1, 'idToken is required'),
 });
 
-export const refreshSchema = z.object({
-  refreshToken: z.string().min(1, 'refreshToken is required'),
-});
-
 export const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });
 
 /* ---- Garden ---- */
+export const GARDEN_TYPES = [
+  'backyard', 'raised_beds', 'balcony', 'indoor', 'community', 'greenhouse', 'other',
+] as const;
+export const SUN_EXPOSURES = [
+  'full_sun', 'partial_sun', 'partial_shade', 'full_shade', 'unsure',
+] as const;
+export const SIZE_TYPES = ['small', 'medium', 'large', 'custom'] as const;
+export const DIMENSION_UNITS = ['ft', 'm'] as const;
+
+const dimensionsSchema = z
+  .object({
+    length: z.number().positive().max(100_000).optional(),
+    width: z.number().positive().max(100_000).optional(),
+    unit: z.enum(DIMENSION_UNITS).optional(),
+  })
+  .optional();
+
 export const createGardenSchema = z.object({
-  name: z.string().min(1),
-  location: z.string().optional(),
-  size: z.string().optional(),
+  name: z.string().trim().min(2, 'Give your garden a name').max(80),
+  type: z.enum(GARDEN_TYPES).default('backyard'),
+  locationLabel: z.string().trim().max(120).optional(),
+  cityOrZip: z.string().trim().max(120).optional(),
+  sunExposure: z.enum(SUN_EXPOSURES).default('unsure'),
+  growingZone: z.string().trim().max(20).optional(),
+  sizeType: z.enum(SIZE_TYPES).default('medium'),
+  dimensions: dimensionsSchema,
+  notes: z.string().trim().max(2000).optional(),
 });
 
 export const updateGardenSchema = createGardenSchema.partial();

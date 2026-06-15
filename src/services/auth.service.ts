@@ -1,28 +1,27 @@
 /**
- * auth.service — registration, login, Google sign-in, token refresh, logout.
- * Returns plain user JSON (via toJSON transform) + a token pair.
+ * auth.service — credentials sign-up / sign-in (and Google groundwork). Returns
+ * a single JWT plus the public user JSON (passwordHash is never included).
  */
 
 import bcrypt from 'bcryptjs';
 
 import { User, IUser } from '../models/User';
 import { AppError } from '../utils/AppError';
-import { issueTokens, rotateRefreshToken, revokeRefreshToken, TokenPair } from './token.service';
+import { signToken } from './token.service';
 import { verifyGoogleIdToken } from './google.service';
 
 const SALT_ROUNDS = 10;
 
 export interface AuthResult {
-  user: ReturnType<IUser['toJSON']>;
-  tokens: TokenPair;
+  token: string;
+  user: Record<string, unknown>;
 }
 
-async function withTokens(user: IUser): Promise<AuthResult> {
-  const tokens = await issueTokens(user.id);
-  return { user: user.toJSON(), tokens };
+function sessionFor(user: IUser): AuthResult {
+  return { token: signToken(user.id), user: user.toJSON() as Record<string, unknown> };
 }
 
-export async function register(params: {
+export async function signup(params: {
   name: string;
   email: string;
   password: string;
@@ -36,25 +35,25 @@ export async function register(params: {
     name: params.name.trim(),
     email,
     passwordHash,
-    authProvider: 'local',
+    authProvider: 'credentials',
   });
 
-  return withTokens(user);
+  return sessionFor(user);
 }
 
 export async function login(params: { email: string; password: string }): Promise<AuthResult> {
   const email = params.email.toLowerCase().trim();
+  // Generic error for both "no user" and "wrong password" — never reveal which.
   const user = await User.findOne({ email }).select('+passwordHash');
-  if (!user || !user.passwordHash) {
-    throw AppError.unauthorized('Incorrect email or password');
-  }
+  if (!user || !user.passwordHash) throw AppError.unauthorized('Invalid email or password');
 
   const ok = await user.comparePassword(params.password);
-  if (!ok) throw AppError.unauthorized('Incorrect email or password');
+  if (!ok) throw AppError.unauthorized('Invalid email or password');
 
-  return withTokens(user);
+  return sessionFor(user);
 }
 
+/** Google groundwork — not wired to the UI yet, kept compiling for later. */
 export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
   const profile = await verifyGoogleIdToken(idToken);
 
@@ -71,22 +70,10 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
       authProvider: 'google',
     });
   } else if (!user.googleId) {
-    // Link Google to an existing local account.
     user.googleId = profile.googleId;
     if (!user.avatar && profile.avatar) user.avatar = profile.avatar;
     await user.save();
   }
 
-  return withTokens(user);
-}
-
-export async function refresh(rawRefresh: string): Promise<AuthResult> {
-  const { userId, ...tokens } = await rotateRefreshToken(rawRefresh);
-  const user = await User.findById(userId);
-  if (!user) throw AppError.unauthorized('Account no longer exists');
-  return { user: user.toJSON(), tokens };
-}
-
-export async function logout(rawRefresh: string): Promise<void> {
-  await revokeRefreshToken(rawRefresh);
+  return sessionFor(user);
 }

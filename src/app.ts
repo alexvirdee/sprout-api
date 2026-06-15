@@ -24,7 +24,7 @@ export function createApp(): Application {
   );
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
-  if (!env.isProd) app.use(morgan('dev'));
+  if (!env.isProd && env.NODE_ENV !== 'test') app.use(morgan('dev'));
 
   app.get('/', (_req, res) => {
     res.json({ name: 'Sprout API', docs: '/api/health' });

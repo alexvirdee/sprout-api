@@ -41,7 +41,7 @@ sprout-server/
 ## Data models
 
 - **User** — `name, email, passwordHash (hidden), avatar, authProvider (local|google), googleId`.
-- **Garden** — `userId, name, location, size`.
+- **Garden** — `userId, name, type, locationLabel, cityOrZip, sunExposure, growingZone, sizeType, dimensions {length, width, unit}, notes, plantCount, taskCount, healthStatus, archivedAt`. `DELETE` soft-archives (sets `archivedAt`); the list endpoint returns only non-archived gardens. Enums: type · sunExposure · sizeType.
 - **Plant** — `gardenId, name, variety, emoji, plantedDate, status, progress, location, notes`.
 - **Task** — `plantId, userId, type, title, dueDate, completed, completedAt`.
 - **RefreshToken** — `userId, tokenHash, expiresAt, revokedAt` (TTL-indexed).

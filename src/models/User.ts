@@ -1,20 +1,21 @@
 /**
- * User model. Supports local (email + password) and Google sign-in. The
+ * User model. Credentials (email + password) auth, with Google groundwork. The
  * password hash is `select: false` so it never leaks unless explicitly asked
- * for. toJSON maps _id → id and strips sensitive fields.
+ * for. toJSON maps _id → id, strips sensitive fields, and always exposes
+ * `avatar` (null when unset) so the client contract is stable.
  */
 
 import { Schema, model, Document, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-export type AuthProvider = 'local' | 'google';
+export type AuthProvider = 'credentials' | 'google';
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
   name: string;
   email: string;
   passwordHash?: string;
-  avatar?: string;
+  avatar?: string | null;
   authProvider: AuthProvider;
   googleId?: string;
   createdAt: Date;
@@ -34,8 +35,8 @@ const userSchema = new Schema<IUser>(
       index: true,
     },
     passwordHash: { type: String, select: false },
-    avatar: { type: String },
-    authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
+    avatar: { type: String, default: null },
+    authProvider: { type: String, enum: ['credentials', 'google'], default: 'credentials' },
     googleId: { type: String, index: true, sparse: true },
   },
   {
@@ -47,6 +48,8 @@ const userSchema = new Schema<IUser>(
         ret.id = ret._id;
         delete ret._id;
         delete ret.passwordHash;
+        // Stable contract: avatar is always present (null when unset).
+        ret.avatar = ret.avatar ?? null;
         return ret;
       },
     },
