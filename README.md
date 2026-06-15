@@ -1,7 +1,7 @@
 # Sprout — Server
 
-REST API for Sprout: Express + TypeScript + MongoDB (Mongoose), JWT auth with
-rotating refresh tokens, and Google OAuth groundwork.
+REST API for Sprout: Express + TypeScript + MongoDB (Mongoose), credentials auth
+with a single signed JWT, and Google OAuth groundwork.
 
 ## Run
 
@@ -19,6 +19,7 @@ npm run dev              # http://localhost:4000  (GET /api/health)
 | `npm run build` | Compile to `dist/`. |
 | `npm start` | Run compiled output. |
 | `npm run typecheck` | `tsc --noEmit`. |
+| `npm test` | Auth tests (Jest + supertest + in-memory MongoDB). |
 
 ## Folder structure
 
@@ -28,7 +29,7 @@ sprout-server/
     ├── index.ts                 # entry: connect DB → listen → graceful shutdown
     ├── app.ts                   # express app: helmet, cors, json, morgan, routes
     ├── config/                  # env (zod-validated), db (mongoose)
-    ├── models/                  # User, Garden, Plant, Task, RefreshToken
+    ├── models/                  # User, Garden, Plant, Task
     ├── controllers/             # auth, user, garden, plant, task
     ├── routes/                  # per-resource routers + index (mounts /api/*)
     ├── middleware/              # protect (JWT), validate (zod), error handler
@@ -40,26 +41,23 @@ sprout-server/
 
 ## Data models
 
-- **User** — `name, email, passwordHash (hidden), avatar, authProvider (local|google), googleId`.
+- **User** — `name, email, passwordHash (hidden), avatar, authProvider (credentials|google), googleId`.
 - **Garden** — `userId, name, type, locationLabel, cityOrZip, sunExposure, growingZone, sizeType, dimensions {length, width, unit}, notes, plantCount, taskCount, healthStatus, archivedAt`. `DELETE` soft-archives (sets `archivedAt`); the list endpoint returns only non-archived gardens. Enums: type · sunExposure · sizeType.
 - **Plant** — `gardenId, name, variety, emoji, plantedDate, status, progress, location, notes`.
 - **Task** — `plantId, userId, type, title, dueDate, completed, completedAt`.
-- **RefreshToken** — `userId, tokenHash, expiresAt, revokedAt` (TTL-indexed).
 
 `toJSON` maps `_id → id`, drops `__v`, and strips the password hash.
 
 ## Auth flow
 
-1. **Register / login** → returns `{ user, tokens: { accessToken, refreshToken } }`.
-   Passwords are hashed with bcrypt; access tokens are short-lived JWTs.
-2. **Authenticated requests** send `Authorization: Bearer <accessToken>`; the
-   `protect` middleware verifies and sets `req.userId`.
-3. **Refresh** (`POST /api/auth/refresh`) verifies the refresh JWT, confirms its
-   hash is stored and not revoked, then **rotates** it (old one revoked, new pair
-   issued) — limiting the blast radius of a leaked token.
-4. **Logout** revokes the presented refresh token.
-5. **Google** (`POST /api/auth/google`) verifies a Google **ID token** with
-   `google-auth-library` and finds-or-creates the user.
+1. **Signup / login** → returns `{ token, user }`. Passwords are hashed with
+   bcrypt; the token is a single signed JWT (`JWT_SECRET`, `JWT_EXPIRES_IN` —
+   default 7 days) carrying `userId`. `passwordHash` is never returned.
+2. **Authenticated requests** send `Authorization: Bearer <token>`; the
+   `protect` middleware verifies it and sets `req.userId`.
+3. **Logout** is client-side — the app deletes its stored token (stateless JWT).
+4. **Google** (`POST /api/auth/google`) is groundwork: verifies a Google **ID
+   token** with `google-auth-library` and finds-or-creates the user (not in scope yet).
 
 ## Conventions
 

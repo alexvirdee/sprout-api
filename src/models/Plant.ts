@@ -1,41 +1,52 @@
 /**
- * Plant model — a single plant within a garden, with growth status and notes.
+ * Plant model — a single plant within a user's garden. Care preferences (type,
+ * sun, watering) and status power tracking; soft-deleted via `archivedAt`.
  */
 
 import { Schema, model, Document, Types } from 'mongoose';
 
-export type PlantStatus = 'thriving' | 'water' | 'harvest' | 'resting';
+import {
+  PLANT_TYPES,
+  PLANT_SOURCES,
+  PLANT_SUN_PREFS,
+  PLANT_WATERING_PREFS,
+  PLANT_STATUSES,
+} from '../validators';
 
 export interface IPlant extends Document {
   _id: Types.ObjectId;
+  userId: Types.ObjectId;
   gardenId: Types.ObjectId;
   name: string;
   variety?: string;
-  emoji?: string;
-  plantedDate: Date;
-  status: PlantStatus;
-  progress: number;
-  location?: string;
+  type: string;
+  plantedDate?: Date | null;
+  source: string;
+  locationInGarden?: string;
+  sunPreference: string;
+  wateringPreference: string;
   notes?: string;
+  status: string;
+  archivedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const plantSchema = new Schema<IPlant>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     gardenId: { type: Schema.Types.ObjectId, ref: 'Garden', required: true, index: true },
     name: { type: String, required: true, trim: true },
     variety: { type: String, trim: true },
-    emoji: { type: String, default: '🌱' },
-    plantedDate: { type: Date, default: Date.now },
-    status: {
-      type: String,
-      enum: ['thriving', 'water', 'harvest', 'resting'],
-      default: 'thriving',
-    },
-    progress: { type: Number, min: 0, max: 100, default: 0 },
-    location: { type: String, trim: true },
+    type: { type: String, enum: [...PLANT_TYPES], default: 'other' },
+    plantedDate: { type: Date, default: null },
+    source: { type: String, enum: [...PLANT_SOURCES], default: 'unknown' },
+    locationInGarden: { type: String, trim: true },
+    sunPreference: { type: String, enum: [...PLANT_SUN_PREFS], default: 'not_sure' },
+    wateringPreference: { type: String, enum: [...PLANT_WATERING_PREFS], default: 'not_sure' },
     notes: { type: String, trim: true },
+    status: { type: String, enum: [...PLANT_STATUSES], default: 'growing' },
+    archivedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

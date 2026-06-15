@@ -57,19 +57,35 @@ export const createGardenSchema = z.object({
 export const updateGardenSchema = createGardenSchema.partial();
 
 /* ---- Plant ---- */
+export const PLANT_TYPES = [
+  'vegetable', 'herb', 'fruit', 'flower', 'houseplant', 'tree', 'shrub', 'succulent', 'other',
+] as const;
+export const PLANT_SOURCES = [
+  'seed', 'seedling', 'transplant', 'cutting', 'store_bought', 'other', 'unknown',
+] as const;
+export const PLANT_SUN_PREFS = [
+  'full_sun', 'partial_sun', 'partial_shade', 'full_shade', 'not_sure',
+] as const;
+export const PLANT_WATERING_PREFS = ['light', 'moderate', 'frequent', 'deep', 'not_sure'] as const;
+export const PLANT_STATUSES = ['growing', 'needs_attention', 'harvested', 'dormant', 'archived'] as const;
+
 export const createPlantSchema = z.object({
   gardenId: z.string().min(1),
-  name: z.string().min(1),
-  variety: z.string().optional(),
-  emoji: z.string().optional(),
+  name: z.string().trim().min(1, 'Give your plant a name').max(80),
+  variety: z.string().trim().max(80).optional(),
+  type: z.enum(PLANT_TYPES).default('other'),
   plantedDate: z.coerce.date().optional(),
-  status: z.enum(['thriving', 'water', 'harvest', 'resting']).optional(),
-  progress: z.number().min(0).max(100).optional(),
-  location: z.string().optional(),
-  notes: z.string().optional(),
+  source: z.enum(PLANT_SOURCES).default('unknown'),
+  locationInGarden: z.string().trim().max(120).optional(),
+  sunPreference: z.enum(PLANT_SUN_PREFS).default('not_sure'),
+  wateringPreference: z.enum(PLANT_WATERING_PREFS).default('not_sure'),
+  notes: z.string().trim().max(2000).optional(),
 });
 
-export const updatePlantSchema = createPlantSchema.partial().omit({ gardenId: true });
+export const updatePlantSchema = createPlantSchema
+  .partial()
+  .omit({ gardenId: true })
+  .extend({ status: z.enum(PLANT_STATUSES).optional() });
 
 /* ---- Task ---- */
 export const createTaskSchema = z.object({
