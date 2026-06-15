@@ -27,6 +27,8 @@ export interface IGarden extends Document {
   sizeType: string;
   dimensions?: IGardenDimensions;
   notes?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   plantCount: number;
   taskCount: number;
   healthStatus: string;
@@ -54,6 +56,8 @@ const gardenSchema = new Schema<IGarden>(
       unit: { type: String, enum: [...DIMENSION_UNITS] },
     },
     notes: { type: String, trim: true },
+    latitude: { type: Number, default: null },
+    longitude: { type: Number, default: null },
     plantCount: { type: Number, default: 0 },
     taskCount: { type: Number, default: 0 },
     healthStatus: { type: String, default: 'Getting started' },
