@@ -12,6 +12,7 @@ import taskRoutes from './task.routes';
 import userRoutes from './user.routes';
 import aiRoutes from './ai.routes';
 import careRoutes from './care.routes';
+import journalRoutes from './journal.routes';
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use('/tasks', taskRoutes);
 router.use('/users', userRoutes);
 router.use('/ai', aiRoutes);
 router.use('/care-tasks', careRoutes);
+router.use('/journal', journalRoutes);
 
 export default router;
