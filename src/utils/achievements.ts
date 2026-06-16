@@ -10,6 +10,8 @@ export interface AchievementMetrics {
   wateringSessions: number;
   longestStreak: number;
   harvests: number;
+  /** Harvest entries recorded in the journal (actual harvest events). */
+  harvestLogs: number;
 }
 
 export type AchievementTone = 'green' | 'gold' | 'terra' | 'sage';
@@ -70,7 +72,15 @@ export const ACHIEVEMENT_DEFS: AchievementDef[] = [
     description: 'Record your first harvest',
     icon: '🍅',
     tone: 'terra',
-    isUnlocked: (m) => m.harvests >= 1,
+    isUnlocked: (m) => m.harvestLogs >= 1 || m.harvests >= 1,
+  },
+  {
+    id: 'bountiful_harvest',
+    title: 'Bountiful Harvest',
+    description: 'Log 10 harvests from your garden',
+    icon: '🧺',
+    tone: 'gold',
+    isUnlocked: (m) => m.harvestLogs >= 10,
   },
   {
     id: 'consistent_care',
