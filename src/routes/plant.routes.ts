@@ -22,6 +22,8 @@ router.delete('/:id', asyncHandler(plant.remove));
 
 // Rules-based care suggestions for a plant + enabling them as tasks.
 router.get('/:plantId/care-suggestions', asyncHandler(care.getSuggestions));
+// AI-refined suggestions (tunes the rules for variety/season; falls back to rules).
+router.post('/:plantId/ai-care-suggestions', asyncHandler(care.getAiSuggestions));
 router.post(
   '/:plantId/enable-care-suggestions',
   validate(enableCareSuggestionsSchema),
