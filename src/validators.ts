@@ -149,6 +149,36 @@ export const updatePreferencesSchema = z.object({
   notificationPreferences: notificationPreferencesSchema.optional(),
 });
 
+/* ---- Care tasks ---- */
+export const CARE_TASK_TYPES = [
+  'watering', 'pruning', 'fertilizing', 'seed_starting', 'transplanting', 'harvesting', 'general',
+] as const;
+export const CARE_RECURRENCES = ['none', 'daily', 'weekly', 'every_x_days', 'monthly', 'yearly'] as const;
+export const CARE_PRIORITIES = ['low', 'medium', 'high'] as const;
+export const CARE_SOURCES = ['system', 'user', 'ai'] as const;
+
+export const createCareTaskSchema = z.object({
+  gardenId: z.string().min(1),
+  plantId: z.string().optional(),
+  title: z.string().trim().min(1, 'Give the task a title').max(120),
+  description: z.string().trim().max(500).optional(),
+  taskType: z.enum(CARE_TASK_TYPES).default('general'),
+  dueDate: z.coerce.date(),
+  recurrence: z.enum(CARE_RECURRENCES).default('none'),
+  recurrenceIntervalDays: z.number().int().positive().max(365).optional(),
+  instructions: z.string().trim().max(2000).optional(),
+  videoUrl: z.string().trim().max(500).optional(),
+  priority: z.enum(CARE_PRIORITIES).default('medium'),
+});
+
+export const updateCareTaskSchema = createCareTaskSchema.partial().omit({ gardenId: true });
+
+export const rescheduleCareTaskSchema = z.object({ dueDate: z.coerce.date() });
+
+export const enableCareSuggestionsSchema = z.object({
+  keys: z.array(z.string().min(1)).min(1, 'Select at least one reminder'),
+});
+
 export const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
   type: z.enum(['water', 'fertilize', 'harvest', 'prune', 'plant', 'other']).optional(),
