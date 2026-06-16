@@ -139,5 +139,31 @@ export const getOne = async (req: Request, res: Response) => {
 export const remove = async (req: Request, res: Response) => {
   const log = await WateringLog.findOneAndDelete({ _id: req.params.id, userId: req.userId });
   if (!log) throw AppError.notFound('Watering log not found');
+
+  // Recompute the garden's rollups from the remaining logs so "undo" is correct
+  // (lastWateredAt, count, and streak all revert).
+  const garden = await Garden.findById(log.gardenId);
+  if (garden) {
+    const remaining = await WateringLog.find({ userId: req.userId, gardenId: log.gardenId })
+      .sort({ createdAt: -1 })
+      .select('createdAt');
+    garden.wateringCount = remaining.length;
+    garden.lastWateredAt = remaining[0]?.createdAt ?? null;
+    garden.wateringStreak = await computeStreak(req.userId, log.gardenId.toString());
+    await garden.save();
+  }
+
+  if (log.plantId) {
+    const plant = await Plant.findById(log.plantId);
+    if (plant) {
+      const remaining = await WateringLog.find({ userId: req.userId, plantId: log.plantId })
+        .sort({ createdAt: -1 })
+        .select('createdAt');
+      plant.wateringCount = remaining.length;
+      plant.lastWateredAt = remaining[0]?.createdAt ?? null;
+      await plant.save();
+    }
+  }
+
   res.json({ ok: true });
 };

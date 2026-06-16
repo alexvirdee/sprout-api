@@ -26,6 +26,11 @@ const schema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
   GOOGLE_CALLBACK_URL: z.string().optional().default(''),
+
+  // AI plant identification (OpenAI vision). Optional — the AI endpoint returns
+  // 503 until a key is set, so the server still boots without it.
+  OPENAI_API_KEY: z.string().optional().default(''),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -45,4 +50,5 @@ export const env = {
   clientOrigins: data.CLIENT_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean),
   isProd: data.NODE_ENV === 'production',
   googleConfigured: Boolean(data.GOOGLE_CLIENT_ID),
+  aiConfigured: Boolean(data.OPENAI_API_KEY),
 };

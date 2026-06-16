@@ -63,7 +63,7 @@ export const PLANT_TYPES = [
   'vegetable', 'herb', 'fruit', 'flower', 'houseplant', 'tree', 'shrub', 'succulent', 'other',
 ] as const;
 export const PLANT_SOURCES = [
-  'seed', 'seedling', 'transplant', 'cutting', 'store_bought', 'other', 'unknown',
+  'seed', 'seedling', 'transplant', 'cutting', 'store_bought', 'ai_scan', 'other', 'unknown',
 ] as const;
 export const PLANT_SUN_PREFS = [
   'full_sun', 'partial_sun', 'partial_shade', 'full_shade', 'not_sure',
@@ -82,6 +82,12 @@ export const createPlantSchema = z.object({
   sunPreference: z.enum(PLANT_SUN_PREFS).default('not_sure'),
   wateringPreference: z.enum(PLANT_WATERING_PREFS).default('not_sure'),
   notes: z.string().trim().max(2000).optional(),
+  // AI scan metadata (optional — set when a plant is added from a scan).
+  scientificName: z.string().trim().max(160).optional(),
+  imageUrl: z.string().trim().max(100_000).optional(),
+  aiIdentified: z.boolean().optional(),
+  identificationConfidence: z.number().min(0).max(1).optional(),
+  aiIdentificationData: z.record(z.unknown()).optional(),
 });
 
 export const updatePlantSchema = createPlantSchema

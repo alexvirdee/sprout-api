@@ -26,6 +26,11 @@ export interface IPlant extends Document {
   sunPreference: string;
   wateringPreference: string;
   notes?: string;
+  scientificName?: string;
+  imageUrl?: string;
+  aiIdentified?: boolean;
+  identificationConfidence?: number;
+  aiIdentificationData?: unknown;
   status: string;
   lastWateredAt?: Date | null;
   wateringCount: number;
@@ -47,6 +52,11 @@ const plantSchema = new Schema<IPlant>(
     sunPreference: { type: String, enum: [...PLANT_SUN_PREFS], default: 'not_sure' },
     wateringPreference: { type: String, enum: [...PLANT_WATERING_PREFS], default: 'not_sure' },
     notes: { type: String, trim: true },
+    scientificName: { type: String, trim: true },
+    imageUrl: { type: String },
+    aiIdentified: { type: Boolean, default: false },
+    identificationConfidence: { type: Number },
+    aiIdentificationData: { type: Schema.Types.Mixed },
     status: { type: String, enum: [...PLANT_STATUSES], default: 'growing' },
     lastWateredAt: { type: Date, default: null },
     wateringCount: { type: Number, default: 0 },

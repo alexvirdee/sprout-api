@@ -10,6 +10,7 @@ import plantRoutes from './plant.routes';
 import wateringRoutes from './watering.routes';
 import taskRoutes from './task.routes';
 import userRoutes from './user.routes';
+import aiRoutes from './ai.routes';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use('/plants', plantRoutes);
 router.use('/watering', wateringRoutes);
 router.use('/tasks', taskRoutes);
 router.use('/users', userRoutes);
+router.use('/ai', aiRoutes);
 
 export default router;
