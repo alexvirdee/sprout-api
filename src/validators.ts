@@ -175,9 +175,33 @@ export const updateCareTaskSchema = createCareTaskSchema.partial().omit({ garden
 
 export const rescheduleCareTaskSchema = z.object({ dueDate: z.coerce.date() });
 
-export const enableCareSuggestionsSchema = z.object({
-  keys: z.array(z.string().min(1)).min(1, 'Select at least one reminder'),
+// A full care suggestion body (the shape the rules engine / AI returns). Used
+// when enabling AI-refined suggestions, whose tuned values the server can't
+// re-derive deterministically (unlike rules, which we look up by key).
+export const careSuggestionInputSchema = z.object({
+  key: z.string().trim().min(1).max(60),
+  taskType: z.enum(CARE_TASK_TYPES),
+  title: z.string().trim().min(1).max(120),
+  detail: z.string().trim().max(200).optional().default(''),
+  recurrence: z.enum(CARE_RECURRENCES),
+  recurrenceIntervalDays: z.number().int().positive().max(365).optional(),
+  instructions: z.string().trim().max(2000).optional().default(''),
+  videoQuery: z.string().trim().max(200).optional(),
+  priority: z.enum(CARE_PRIORITIES),
+  firstDueInDays: z.number().int().min(0).max(365),
 });
+
+// Enable suggestions either by key (rules-based, re-derived server-side) or by
+// passing full suggestion bodies (AI-refined). At least one must be present.
+export const enableCareSuggestionsSchema = z
+  .object({
+    keys: z.array(z.string().min(1)).optional(),
+    suggestions: z.array(careSuggestionInputSchema).max(20).optional(),
+    source: z.enum(['system', 'ai']).optional(),
+  })
+  .refine((d) => (d.keys?.length ?? 0) > 0 || (d.suggestions?.length ?? 0) > 0, {
+    message: 'Select at least one reminder',
+  });
 
 export const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
@@ -185,3 +209,22 @@ export const updateTaskSchema = z.object({
   dueDate: z.coerce.date().optional(),
   completed: z.boolean().optional(),
 });
+
+/* ---- Journal / harvest log ---- */
+export const JOURNAL_ENTRY_TYPES = ['harvest', 'note', 'milestone'] as const;
+export const JOURNAL_UNITS = ['count', 'g', 'kg', 'oz', 'lb', 'bunch', 'basket', 'handful'] as const;
+
+export const createJournalEntrySchema = z.object({
+  gardenId: z.string().min(1),
+  plantId: z.string().optional(),
+  type: z.enum(JOURNAL_ENTRY_TYPES).default('note'),
+  title: z.string().trim().max(120).optional(),
+  note: z.string().trim().max(2000).optional(),
+  quantity: z.number().nonnegative().max(1_000_000).optional(),
+  unit: z.enum(JOURNAL_UNITS).optional(),
+  rating: z.number().int().min(1).max(5).optional(),
+  careTaskId: z.string().optional(),
+  occurredAt: z.coerce.date().optional(),
+});
+
+export const updateJournalEntrySchema = createJournalEntrySchema.partial().omit({ gardenId: true });

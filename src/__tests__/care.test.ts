@@ -160,3 +160,66 @@ describe('care tasks API', () => {
     expect(String(enable.body.tasks[0].plantId)).toBe(plantId);
   });
 });
+
+describe('AI-refined care suggestions', () => {
+  // No OPENAI_API_KEY in tests → the endpoint gracefully falls back to the
+  // rules (aiUsed:false) end-to-end, which is exactly the behaviour we want
+  // when AI is unconfigured. (The coercion path is unit-tested in careAi.test.ts.)
+  it('returns suggestions with aiUsed:false when AI is unconfigured', async () => {
+    const { token, plantId } = await setup();
+    const res = await request(app).post(`/api/plants/${plantId}/ai-care-suggestions`).set(auth(token));
+    expect(res.status).toBe(200);
+    expect(res.body.aiUsed).toBe(false);
+    expect(res.body.suggestions.length).toBeGreaterThan(0);
+    expect(res.body.suggestions.map((s: { key: string }) => s.key)).toEqual(
+      expect.arrayContaining(['water', 'harvest'])
+    );
+  });
+
+  it('rejects unauthenticated AI suggestion requests (401)', async () => {
+    const { plantId } = await setup();
+    expect((await request(app).post(`/api/plants/${plantId}/ai-care-suggestions`)).status).toBe(401);
+  });
+
+  it('returns 404 for a plant you do not own', async () => {
+    const a = await setup();
+    const b = await setup();
+    expect(
+      (await request(app).post(`/api/plants/${a.plantId}/ai-care-suggestions`).set(auth(b.token))).status
+    ).toBe(404);
+  });
+
+  it('enables full (AI) suggestion bodies as ai-source tasks', async () => {
+    const { token, plantId } = await setup();
+    const suggestions = [
+      {
+        key: 'water',
+        taskType: 'watering',
+        title: 'Water Basil',
+        detail: 'Every 4 days',
+        recurrence: 'every_x_days',
+        recurrenceIntervalDays: 4,
+        instructions: 'Check the top inch of soil first.',
+        priority: 'medium',
+        firstDueInDays: 4,
+      },
+    ];
+    const enable = await request(app)
+      .post(`/api/plants/${plantId}/enable-care-suggestions`)
+      .set(auth(token))
+      .send({ suggestions, source: 'ai' });
+    expect(enable.status).toBe(201);
+    expect(enable.body.tasks.length).toBe(1);
+    expect(enable.body.tasks[0].source).toBe('ai');
+    expect(enable.body.tasks[0].recurrenceIntervalDays).toBe(4);
+  });
+
+  it('rejects enabling with neither keys nor suggestions (400)', async () => {
+    const { token, plantId } = await setup();
+    const res = await request(app)
+      .post(`/api/plants/${plantId}/enable-care-suggestions`)
+      .set(auth(token))
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});
