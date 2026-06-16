@@ -11,6 +11,7 @@ import { User, NotificationPreferences, ThemePreference } from '../models/User';
 import { Garden } from '../models/Garden';
 import { Plant } from '../models/Plant';
 import { WateringLog } from '../models/WateringLog';
+import { JournalEntry } from '../models/JournalEntry';
 import { Task } from '../models/Task';
 import { AppError } from '../utils/AppError';
 import { streakStats } from '../utils/streak';
@@ -102,17 +103,27 @@ export const updatePreferences = async (req: Request, res: Response) => {
 
 /** All the counts + streaks the profile derives from real activity. */
 async function gatherMetrics(userId: string | undefined) {
-  const [gardensActive, gardensTotal, plantsActive, plantsTotal, wateringSessions, harvests, tasksCompleted, logs] =
-    await Promise.all([
-      Garden.countDocuments({ userId, archivedAt: null }),
-      Garden.countDocuments({ userId }),
-      Plant.countDocuments({ userId, archivedAt: null }),
-      Plant.countDocuments({ userId }),
-      WateringLog.countDocuments({ userId }),
-      Plant.countDocuments({ userId, status: 'harvested' }),
-      Task.countDocuments({ userId, completed: true }),
-      WateringLog.find({ userId }).select('createdAt').lean(),
-    ]);
+  const [
+    gardensActive,
+    gardensTotal,
+    plantsActive,
+    plantsTotal,
+    wateringSessions,
+    harvests,
+    harvestLogs,
+    tasksCompleted,
+    logs,
+  ] = await Promise.all([
+    Garden.countDocuments({ userId, archivedAt: null }),
+    Garden.countDocuments({ userId }),
+    Plant.countDocuments({ userId, archivedAt: null }),
+    Plant.countDocuments({ userId }),
+    WateringLog.countDocuments({ userId }),
+    Plant.countDocuments({ userId, status: 'harvested' }),
+    JournalEntry.countDocuments({ userId, type: 'harvest' }),
+    Task.countDocuments({ userId, completed: true }),
+    WateringLog.find({ userId }).select('createdAt').lean(),
+  ]);
 
   const { current, longest } = streakStats(logs.map((l) => l.createdAt as Date));
 
@@ -123,6 +134,7 @@ async function gatherMetrics(userId: string | undefined) {
     plantsTotal,
     wateringSessions,
     harvests,
+    harvestLogs,
     tasksCompleted,
     currentStreak: current,
     longestStreak: longest,
@@ -138,6 +150,7 @@ export const getStats = async (req: Request, res: Response) => {
       plants: m.plantsActive,
       wateringSessions: m.wateringSessions,
       harvests: m.harvests,
+      harvestLogs: m.harvestLogs,
       tasksCompleted: m.tasksCompleted,
       currentStreak: m.currentStreak,
       longestStreak: m.longestStreak,
@@ -154,6 +167,7 @@ export const getAchievements = async (req: Request, res: Response) => {
     wateringSessions: m.wateringSessions,
     longestStreak: m.longestStreak,
     harvests: m.harvests,
+    harvestLogs: m.harvestLogs,
   };
 
   const user = await User.findById(req.userId);

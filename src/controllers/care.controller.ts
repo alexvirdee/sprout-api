@@ -12,7 +12,9 @@ import { Garden } from '../models/Garden';
 import { Plant } from '../models/Plant';
 import { AppError } from '../utils/AppError';
 import { suggestCareForPlant } from '../services/careSuggestion.service';
+import { refineCareSuggestions } from '../services/careAi.service';
 import { nextDueDate, youtubeSearchUrl } from '../services/careTask.service';
+import { CareSuggestion } from '../types/care.types';
 
 const DAY_MS = 86_400_000;
 
@@ -137,19 +139,39 @@ export const getSuggestions = async (req: Request, res: Response) => {
   res.json({ suggestions: suggestCareForPlant({ name: plant.name, type: plant.type }) });
 };
 
-export const enableSuggestions = async (req: Request, res: Response) => {
+/**
+ * AI-refined suggestions: start from the deterministic rules, then let the AI
+ * tune them for this variety/season. Falls back to the rules (aiUsed:false) when
+ * AI is unavailable — it never fails just because there's no key.
+ */
+export const getAiSuggestions = async (req: Request, res: Response) => {
   const plant = await assertOwnsPlant(req.userId, req.params.plantId);
-  const keys = req.body.keys as string[];
-  const selected = suggestCareForPlant({ name: plant.name, type: plant.type }).filter((s) => keys.includes(s.key));
+  const baseline = suggestCareForPlant({ name: plant.name, type: plant.type });
 
-  if (selected.length === 0) {
-    res.status(201).json({ tasks: [] });
-    return;
-  }
+  // Season/hemisphere context from the plant's garden (best-effort).
+  const garden = await Garden.findOne({ _id: plant.gardenId, userId: req.userId });
+  const lat = typeof garden?.latitude === 'number' ? garden.latitude : null;
+  const hemisphere = lat == null ? undefined : lat >= 0 ? 'northern' : 'southern';
 
-  const now = Date.now();
-  const docs = selected.map((s) => ({
-    userId: req.userId as unknown as Types.ObjectId,
+  const { suggestions, aiUsed } = await refineCareSuggestions({
+    plant: {
+      name: plant.name,
+      type: plant.type,
+      variety: plant.variety,
+      scientificName: plant.scientificName,
+    },
+    baseline,
+    hemisphere,
+    month: new Date().getMonth() + 1,
+  });
+
+  res.json({ suggestions, aiUsed });
+};
+
+/** Turn a care suggestion into a CareTask document for this plant. */
+function suggestionToDoc(s: CareSuggestion, plant: { _id: Types.ObjectId; gardenId: Types.ObjectId }, userId: unknown, now: number, source: 'system' | 'ai') {
+  return {
+    userId: userId as Types.ObjectId,
     gardenId: plant.gardenId,
     plantId: plant._id,
     title: s.title,
@@ -161,8 +183,35 @@ export const enableSuggestions = async (req: Request, res: Response) => {
     instructions: s.instructions,
     videoUrl: s.videoQuery ? youtubeSearchUrl(s.videoQuery) : undefined,
     priority: s.priority,
-    source: 'system' as const,
-  }));
+    source,
+  };
+}
+
+export const enableSuggestions = async (req: Request, res: Response) => {
+  const plant = await assertOwnsPlant(req.userId, req.params.plantId);
+  const body = req.body as { keys?: string[]; suggestions?: CareSuggestion[]; source?: 'system' | 'ai' };
+
+  // Two modes:
+  //  • suggestions[] — full bodies (used for AI-refined tasks we can't re-derive)
+  //  • keys[]        — rules-based, re-derived server-side (default, trusted)
+  let selected: CareSuggestion[];
+  let source: 'system' | 'ai';
+  if (body.suggestions && body.suggestions.length > 0) {
+    selected = body.suggestions;
+    source = body.source ?? 'ai';
+  } else {
+    const keys = body.keys ?? [];
+    selected = suggestCareForPlant({ name: plant.name, type: plant.type }).filter((s) => keys.includes(s.key));
+    source = 'system';
+  }
+
+  if (selected.length === 0) {
+    res.status(201).json({ tasks: [] });
+    return;
+  }
+
+  const now = Date.now();
+  const docs = selected.map((s) => suggestionToDoc(s, plant, req.userId, now, source));
 
   const tasks = await CareTask.insertMany(docs);
   res.status(201).json({ tasks: tasks.map((t) => t.toJSON()) });
